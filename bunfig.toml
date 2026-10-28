@@ -1,0 +1,14 @@
+jsx = "react-jsx"
+jsxImportSource = "sinwan"
+preload = ["./src/sinwan-preload.ts"]
+
+[test]
+root = "__tests__"
+preload = ["./src/sinwan-preload.ts"]
+coverageSkipTestFiles = true
+coveragePathIgnorePatterns = [
+  "**/__tests__/**",
+  "**/node_modules/**",
+  "**/sinwan/dist/**",
+  "**/sinwan-preload.ts",
+]

@@ -1,0 +1,118 @@
+{
+  "name": "sinwan-ui-core",
+  "version": "1.0.0",
+  "description": "Headless behaviour primitives for Sinwan UI components: overlays, floating positioning, dismiss layers, controls, slots, theme and direction.",
+  "author": "Mohammed Ben Cheikh",
+  "license": "MIT",
+  "homepage": "https://sinwanjs.com",
+  "bugs": "https://github.com/sinwanjs/sinwan-ui-core/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sinwanjs/sinwan-ui-core.git"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "sinwan-ui-core:source": "./src/index.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./controls": {
+      "types": "./dist/controls.d.ts",
+      "sinwan-ui-core:source": "./src/controls.tsx",
+      "import": "./dist/controls.js",
+      "default": "./dist/controls.js"
+    },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "sinwan-ui-core:source": "./src/core.tsx",
+      "import": "./dist/core.js",
+      "default": "./dist/core.js"
+    },
+    "./direction": {
+      "types": "./dist/direction.d.ts",
+      "sinwan-ui-core:source": "./src/direction.tsx",
+      "import": "./dist/direction.js",
+      "default": "./dist/direction.js"
+    },
+    "./dismiss": {
+      "types": "./dist/dismiss.d.ts",
+      "sinwan-ui-core:source": "./src/dismiss.ts",
+      "import": "./dist/dismiss.js",
+      "default": "./dist/dismiss.js"
+    },
+    "./floating": {
+      "types": "./dist/floating.d.ts",
+      "sinwan-ui-core:source": "./src/floating.ts",
+      "import": "./dist/floating.js",
+      "default": "./dist/floating.js"
+    },
+    "./menu-sub": {
+      "types": "./dist/menu-sub.d.ts",
+      "sinwan-ui-core:source": "./src/menu-sub.tsx",
+      "import": "./dist/menu-sub.js",
+      "default": "./dist/menu-sub.js"
+    },
+    "./overlay": {
+      "types": "./dist/overlay.d.ts",
+      "sinwan-ui-core:source": "./src/overlay.tsx",
+      "import": "./dist/overlay.js",
+      "default": "./dist/overlay.js"
+    },
+    "./slot": {
+      "types": "./dist/slot.d.ts",
+      "sinwan-ui-core:source": "./src/slot.ts",
+      "import": "./dist/slot.js",
+      "default": "./dist/slot.js"
+    },
+    "./theme": {
+      "types": "./dist/theme.d.ts",
+      "sinwan-ui-core:source": "./src/theme.tsx",
+      "import": "./dist/theme.js",
+      "default": "./dist/theme.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "sinwan-ui-core:source": "./src/types.ts",
+      "import": "./dist/types.js",
+      "default": "./dist/types.js"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "CHANGELOG.md"
+  ],
+  "keywords": [
+    "sinwan",
+    "ui",
+    "headless",
+    "primitives",
+    "accessibility",
+    "floating"
+  ],
+  "scripts": {
+    "build": "bun run build.ts",
+    "test": "bun test --coverage ./__tests__",
+    "typecheck": "bunx tsc -p tsconfig.json",
+    "exports:check": "bun run scripts/export-map.ts --check",
+    "exports:sync": "bun run scripts/export-map.ts --write"
+  },
+  "dependencies": {
+    "@floating-ui/dom": "^1.8.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "bun-plugin-sinwan": "1.0.0",
+    "happy-dom": "^20.14.5",
+    "sinwan": "^2.0.3",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "sinwan": ">=2.0.3 <3.0.0"
+  }
+}
