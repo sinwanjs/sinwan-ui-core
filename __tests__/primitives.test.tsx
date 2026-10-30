@@ -231,6 +231,28 @@ describe("primitives controls", () => {
     unmount();
   });
 
+  test("toggle group root forwards aria-* attributes and keeps them live", async () => {
+    const label = signal("Billing period");
+    const { unmount } = mountUi(() => (
+      <ToggleGroupRoot
+        type="single"
+        defaultValue="monthly"
+        aria-label={label.value}
+        aria-describedby="billing-help"
+      >
+        <ToggleGroupItem value="monthly">Monthly</ToggleGroupItem>
+      </ToggleGroupRoot>
+    ));
+    const group = query('[data-slot="toggle-group"]');
+    expect(group?.getAttribute("role")).toBe("group");
+    expect(group?.getAttribute("aria-label")).toBe("Billing period");
+    expect(group?.getAttribute("aria-describedby")).toBe("billing-help");
+    label.value = "Payment frequency";
+    await flush();
+    expect(group?.getAttribute("aria-label")).toBe("Payment frequency");
+    unmount();
+  });
+
   test("accordion content stays mounted closed then unmounts", async () => {
     const { click, unmount } = mountUi(() => (
       <AccordionRoot type="single" collapsible defaultValue="1">

@@ -1,6 +1,6 @@
 {
   "name": "sinwan-ui-core",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Headless behaviour primitives for Sinwan UI components: overlays, floating positioning, dismiss layers, controls, slots, theme and direction.",
   "author": "Mohammed Ben Cheikh",
   "license": "MIT",
@@ -107,7 +107,7 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "bun-plugin-sinwan": "1.0.0",
+    "bun-plugin-sinwan": "^1.0.1",
     "happy-dom": "^20.14.5",
     "sinwan": "^2.0.3",
     "typescript": "^5.9.3"

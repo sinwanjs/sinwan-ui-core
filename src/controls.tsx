@@ -1,4 +1,4 @@
-import { cc, inject, provide, type InjectionKey, type SinwanNode } from "sinwan/component";
+import { cc, getRawProps, inject, provide, type InjectionKey, type SinwanNode } from "sinwan/component";
 import { For, Show } from "sinwan/control-flow";
 import { computed, signal, type Computed, type Signal } from "sinwan/reactivity";
 import { Slot } from "./slot";
@@ -457,8 +457,13 @@ export const ToggleGroupRoot = cc<{
   "data-size"?: string;
   "data-spacing"?: string | number;
   "data-orientation"?: string;
+  [key: `aria-${string}`]: string | boolean | undefined;
 }>((props) => {
   const type = props.type ?? "single";
+  // Raw values keep getters, so a signal-driven aria-label stays live.
+  const ariaProps = Object.fromEntries(
+    Object.entries(getRawProps(props)).filter(([key]) => key.startsWith("aria-")),
+  );
   const valueLocal = signal(toValueList(props.defaultValue));
   const value =
     "value" in props ? computed(() => toValueList(props.value)) : valueLocal;
@@ -491,6 +496,7 @@ export const ToggleGroupRoot = cc<{
       data-size={props["data-size"]}
       data-spacing={props["data-spacing"]}
       data-orientation={props["data-orientation"]}
+      {...ariaProps}
     >
       {props.children}
     </div>
