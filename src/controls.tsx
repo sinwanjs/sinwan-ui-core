@@ -1,8 +1,9 @@
-import { cc, getRawProps, inject, provide, type InjectionKey, type SinwanNode } from "sinwan/component";
+import { cc, getRawProps, inject, onUnmounted, provide, type InjectionKey, type SinwanNode } from "sinwan/component";
 import { For, Show } from "sinwan/control-flow";
 import { computed, signal, type Computed, type Signal } from "sinwan/reactivity";
 import { Slot } from "./slot";
 import { Presence } from "./core";
+import { DirectionKey, type DirectionApi } from "./direction";
 
 function toValueList(v: string | string[] | undefined): string[] {
   if (v == null) return [];
@@ -340,11 +341,31 @@ export const SwitchRoot = cc<{
   );
 });
 
+/** A radio registered with its group for roving focus. */
+export type RadioGroupEntry = {
+  value: () => string;
+  disabled: () => boolean;
+  el: HTMLElement;
+};
+
 export const RadioGroupKey: InjectionKey<{
   value: Signal<string> | Computed<string>;
   setValue: (v: string) => void;
   name?: string;
+  /** Adds a radio to the group's keyboard order; returns its removal. */
+  register: (entry: RadioGroupEntry) => () => void;
+  /** Value of the one radio that is in the tab order. */
+  tabStop: Computed<string | undefined>;
+  /** Moves focus and selection `step` enabled radios from `from`, wrapping. */
+  move: (from: string, step: 1 | -1) => void;
 }> = Symbol("sinwan-ui.radio-group");
+
+const DOCUMENT_POSITION_FOLLOWING = 4;
+
+/** Sorts radios by position in the document (keydown time only). */
+function inDocumentOrder(a: RadioGroupEntry, b: RadioGroupEntry): number {
+  return a.el.compareDocumentPosition(b.el) & DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+}
 
 export const RadioGroupRoot = cc<{
   children?: SinwanNode;
@@ -360,12 +381,40 @@ export const RadioGroupRoot = cc<{
   const set = (next: string) => {
     if (!("value" in props)) valueLocal.value = next;
   };
+  const setValue = (v: string) => {
+    set(v);
+    props.onValueChange?.(v);
+  };
+  const entries = signal<readonly RadioGroupEntry[]>([]);
+  // Registration follows render order. Radios register while still in a
+  // detached template fragment, so document order is read only on keydown.
+  const enabled = () => entries.value.filter((entry) => !entry.disabled());
+  // WAI-ARIA radio group: the checked radio, else the first enabled one.
+  const tabStop = computed(() => {
+    const list = enabled();
+    return (list.find((entry) => entry.value() === value.value) ?? list[0])?.value();
+  });
   provide(RadioGroupKey, {
     value,
     name: props.name,
-    setValue: (v: string) => {
-      set(v);
-      props.onValueChange?.(v);
+    setValue,
+    register: (entry: RadioGroupEntry) => {
+      entries.value = [...entries.value, entry];
+      return () => {
+        entries.value = entries.value.filter((other) => other !== entry);
+      };
+    },
+    tabStop,
+    move: (from: string, step: 1 | -1) => {
+      const list = enabled().sort(inDocumentOrder);
+      if (list.length === 0) return;
+      const index = list.findIndex((entry) => entry.value() === from);
+      const next =
+        index === -1
+          ? list[step === 1 ? 0 : list.length - 1]!
+          : list[(index + step + list.length) % list.length]!;
+      next.el.focus();
+      setValue(next.value());
     },
   });
   return (
@@ -375,30 +424,59 @@ export const RadioGroupRoot = cc<{
   );
 });
 
+const LTR: Pick<DirectionApi, "dir"> = { dir: { value: "ltr" } };
+
+/** Arrow key to step: Down/Right = next, Up/Left = previous (Left/Right swap in RTL). */
+function radioStep(key: string, dir: DirectionApi["dir"]["value"]): 1 | -1 | 0 {
+  const forward = dir === "rtl" ? "ArrowLeft" : "ArrowRight";
+  const backward = dir === "rtl" ? "ArrowRight" : "ArrowLeft";
+  if (key === "ArrowDown" || key === forward) return 1;
+  if (key === "ArrowUp" || key === backward) return -1;
+  return 0;
+}
+
 export const RadioGroupItem = cc<{
   value: string;
   class?: string;
   disabled?: boolean;
   id?: string;
   children?: SinwanNode;
-}>(({ value, class: className, disabled, id, children }) => {
+}>((props) => {
   const api = inject(RadioGroupKey)!;
+  const direction = inject<Pick<DirectionApi, "dir">>(DirectionKey, LTR);
+  let unregister: (() => void) | undefined;
+  onUnmounted(() => unregister?.());
   return (
     <button
+      ref={(el: HTMLButtonElement | null) => {
+        if (el && !unregister) {
+          unregister = api.register({
+            value: () => props.value,
+            disabled: () => Boolean(props.disabled),
+            el,
+          });
+        }
+      }}
       type="button"
       role="radio"
-      id={id}
+      id={props.id}
       data-slot="radio-group-item"
-      data-state={api.value.value === value ? "checked" : "unchecked"
-      }
-      aria-checked={api.value.value === value}
-      disabled={disabled}
-      class={className}
+      data-state={api.value.value === props.value ? "checked" : "unchecked"}
+      aria-checked={api.value.value === props.value}
+      tabIndex={api.tabStop.value === props.value ? 0 : -1}
+      disabled={props.disabled}
+      class={props.class}
       onclick={() => {
-        if (!disabled) api.setValue(value);
+        if (!props.disabled) api.setValue(props.value);
+      }}
+      onkeydown={(event: KeyboardEvent) => {
+        const step = radioStep(event.key, direction.dir.value);
+        if (step === 0) return;
+        event.preventDefault();
+        api.move(props.value, step);
       }}
     >
-      {children}
+      {props.children}
     </button>
   );
 });

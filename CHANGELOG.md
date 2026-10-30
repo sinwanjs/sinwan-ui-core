@@ -2,6 +2,13 @@
 
 All notable changes to this package are documented in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package uses [Semantic Versioning](https://semver.org/).
 
+## [1.2.0]
+
+### Added
+
+- `RadioGroupRoot` / `RadioGroupItem` (`controls`) follow the WAI-ARIA radio group keyboard pattern. The group has a single tab stop: the checked radio, or the first enabled one when nothing is checked. ArrowDown/ArrowRight select and focus the next enabled radio, and ArrowUp/ArrowLeft the previous one. Both wrap and skip disabled radios, and ArrowLeft/ArrowRight swap inside a right-to-left `DirectionProvider`. Click and Space are unchanged. Before, every radio was its own tab stop and arrow keys did nothing.
+- `RadioGroupKey` gains `register`, `tabStop` and `move`, and the `RadioGroupEntry` type is exported. Code that only reads `value` and `setValue` is unaffected.
+
 ## [1.1.1]
 
 ### Fixed
