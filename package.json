@@ -1,6 +1,6 @@
 {
   "name": "sinwan-ui-core",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Headless behaviour primitives for Sinwan UI components: overlays, floating positioning, dismiss layers, controls, slots, theme and direction.",
   "author": "Mohammed Ben Cheikh",
   "license": "MIT",

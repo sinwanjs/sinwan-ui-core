@@ -266,12 +266,16 @@ describe("ThemeProvider", () => {
       </ThemeProvider>
     ));
     expect(api().palette.value).toBe("credit-blue");
-    expect(api().palettes).toEqual(["credit-blue", "jomlaty"]);
+    expect(api().palettes).toEqual(["credit-blue", "jomlaty", "cazview"]);
     expect(html().getAttribute("data-palette")).toBe("credit-blue");
     api().setPalette("jomlaty");
     expect(api().palette.value).toBe("jomlaty");
     expect(html().getAttribute("data-palette")).toBe("jomlaty");
     expect(localStorage.getItem("sinwan-ui-palette")).toBe("jomlaty");
+    api().setPalette("cazview");
+    expect(api().palette.value).toBe("cazview");
+    expect(html().getAttribute("data-palette")).toBe("cazview");
+    expect(localStorage.getItem("sinwan-ui-palette")).toBe("cazview");
     unmount();
   });
 
@@ -319,7 +323,7 @@ describe("ThemeProvider", () => {
         <Capture />
       </ThemeProvider>
     ));
-    expect(api().palettes).toEqual(["credit-blue", "jomlaty"]);
+    expect(api().palettes).toEqual(["credit-blue", "jomlaty", "cazview"]);
     empty.unmount();
   });
 });

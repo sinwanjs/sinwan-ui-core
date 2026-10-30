@@ -2,6 +2,12 @@
 
 All notable changes to this package are documented in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package uses [Semantic Versioning](https://semver.org/).
 
+## [1.1.0]
+
+### Added
+
+- `cazview` palette: `Palette` now accepts `"cazview"` and `ThemeProvider`'s default `palettes` list is `["credit-blue", "jomlaty", "cazview"]`. Pair it with the registry stylesheet, which defines the `html[data-palette="cazview"]` tokens (midnight `#111E2E` text, `#1A73E8` → `#3B52D9` → `#7B2CBF` brand gradient, `#FAFAFA` surface).
+
 ## [1.0.0]
 
 Initial release: the headless primitives extracted from `sinwan-ui` 0.1.0, published separately so registry components copied into apps can depend on them.

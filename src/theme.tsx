@@ -11,9 +11,9 @@ import { batch, computed, signal, type Signal } from "sinwan/reactivity";
 
 export type Theme = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
-export type Palette = "credit-blue" | "jomlaty";
+export type Palette = "credit-blue" | "jomlaty" | "cazview";
 
-const DEFAULT_PALETTES: Palette[] = ["credit-blue", "jomlaty"];
+const DEFAULT_PALETTES: Palette[] = ["credit-blue", "jomlaty", "cazview"];
 
 export type ThemeApi = {
   theme: Signal<Theme>;
