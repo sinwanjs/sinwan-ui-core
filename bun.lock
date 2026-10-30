@@ -9,7 +9,7 @@
       },
       "devDependencies": {
         "@types/bun": "latest",
-        "bun-plugin-sinwan": "1.0.0",
+        "bun-plugin-sinwan": "^1.0.1",
         "happy-dom": "^20.14.5",
         "sinwan": "^2.0.3",
         "typescript": "^5.9.3",
@@ -78,7 +78,7 @@
 
     "buffer-image-size": ["buffer-image-size@0.6.4", "", { "dependencies": { "@types/node": "*" } }, "sha512-nEh+kZOPY1w+gcCMobZ6ETUp9WfibndnosbpwB1iJk/8Gt5ZF2bhS6+B6bPYz424KtwsR6Rflc3tCz1/ghX2dQ=="],
 
-    "bun-plugin-sinwan": ["bun-plugin-sinwan@1.0.0", "", { "dependencies": { "sinwan-compiler": ">=1.0.0 <2.0.0" }, "peerDependencies": { "typescript": ">=5.0.0 <8.0.0" }, "bin": { "sinwan": "dist/cli.js" } }, "sha512-Qwv5dtm8vgbdo48yhjxbx0sDuJnMyxLeY2qKs+vjbT/HhKCkEfst5d0ujBbeZ7R3zXfrLpPRXTKqxCZEoJoFTQ=="],
+    "bun-plugin-sinwan": ["bun-plugin-sinwan@1.0.1", "", { "dependencies": { "sinwan-compiler": ">=1.1.2 <2.0.0" }, "peerDependencies": { "typescript": ">=5.0.0 <8.0.0" }, "bin": { "sinwan": "dist/cli.js" } }, "sha512-uD7/v9nABYj7Q7m2hIdeCya6p+w1wkZcZxZh9nqXpjgUEFJrl0D7R1bhFZbHEf+pICPKhcuw9aVerTc7tje61g=="],
 
     "bun-types": ["bun-types@1.4.4", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ=="],
 
@@ -94,7 +94,7 @@
 
     "sinwan": ["sinwan@2.0.3", "", { "dependencies": { "csstype": "^3.2.3" }, "peerDependencies": { "typescript": ">=5.0.0 <8.0.0" } }, "sha512-alptCLbtDavuZ7Tks/KfNY3CnxJVSVdpTwG/afGnobe9BxxKRPBNZ/E4V49ZFwQNtx9wuLkvJeO6IFo1iQwNzw=="],
 
-    "sinwan-compiler": ["sinwan-compiler@1.0.0", "", { "dependencies": { "esrap": "^2.3.7", "oxc-parser": "^0.150.0" }, "peerDependencies": { "typescript": ">=5.0.0 <8.0.0" }, "bin": { "sinwan": "dist/cli.js" } }, "sha512-bsJs7gC8pY+5Yfpt0wNTbnNs3R7s/BSr5W0VggSaK054EaUZ6VlP4xDNuysSK8jZUXQsNpM8MEHpQRtGabZOWg=="],
+    "sinwan-compiler": ["sinwan-compiler@1.1.2", "", { "dependencies": { "esrap": "^2.3.7", "oxc-parser": "^0.150.0" }, "peerDependencies": { "typescript": ">=5.0.0 <8.0.0" }, "bin": { "sinwan": "dist/cli.js" } }, "sha512-s3Mu7JyPrPI6/J2lyi9Se5iC+MankCDqgKxwEmL2UEqa5xNNYCgHK9jgMzIfZPDwNpXex2O7gvTYZccFs2n1Pg=="],
 
     "typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
