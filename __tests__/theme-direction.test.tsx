@@ -37,6 +37,25 @@ function captureTheme(): { api: () => ThemeApi; Capture: () => null } {
 }
 
 const html = () => document.documentElement;
+const lockText = () =>
+  [...document.head.querySelectorAll("style")].find((style) => (style.textContent ?? "").includes("transition:none"))
+    ?.textContent ?? null;
+
+/** Records every property read on a computed style, with the transition lock's CSS at that moment. */
+function spyComputedStyleReads(): { entries: { lock: string | null; property: string | symbol }[]; restore(): void } {
+  const original = window.getComputedStyle;
+  const entries: { lock: string | null; property: string | symbol }[] = [];
+  const spy: typeof window.getComputedStyle = (element, pseudoElement) =>
+    new Proxy(original.call(window, element, pseudoElement), {
+      get(target, property) {
+        entries.push({ lock: lockText(), property });
+        const value: unknown = Reflect.get(target, property);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+  window.getComputedStyle = spy;
+  return { entries, restore: () => (window.getComputedStyle = original) };
+}
 const transitionLocked = () =>
   [...document.head.querySelectorAll("style")].some((style) => (style.textContent ?? "").includes("transition:none"));
 
@@ -59,7 +78,7 @@ describe("ThemeProvider", () => {
     unmount();
   });
 
-  test("locks transitions while switching and releases them on the next frame", async () => {
+  test("locks only transitions, reads computed style under the lock, and releases it before setTheme returns", async () => {
     const { api, Capture } = captureTheme();
     const { unmount } = mountUi(() => (
       <ThemeProvider defaultTheme="light">
@@ -67,9 +86,19 @@ describe("ThemeProvider", () => {
       </ThemeProvider>
     ));
     await wait(20);
-    api().setTheme("dark");
-    expect(transitionLocked()).toBe(true);
-    await wait(40);
+    const reads = spyComputedStyleReads();
+    try {
+      api().setTheme("dark");
+    } finally {
+      reads.restore();
+    }
+    expect(html().classList.contains("dark")).toBe(true);
+    // A property read is what makes the browser compute the new theme while
+    // transitions are off; `getComputedStyle()` alone computes nothing.
+    const locked = reads.entries.filter((entry) => entry.lock !== null);
+    expect(locked.length).toBeGreaterThan(0);
+    // Lifting `animation: none` would restart every running or finished entrance animation.
+    for (const entry of locked) expect(entry.lock).not.toContain("animation");
     expect(transitionLocked()).toBe(false);
     unmount();
   });

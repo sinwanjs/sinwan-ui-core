@@ -2,6 +2,13 @@
 
 All notable changes to this package are documented in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package uses [Semantic Versioning](https://semver.org/).
 
+## [1.2.1]
+
+### Fixed
+
+- `ThemeProvider` (`theme`): switching the theme no longer replays entrance animations. The transition lock used to set `animation: none` as well, and lifting it restarts every CSS animation on the page, so `animate-in` blocks faded in again after each switch. The lock now only turns transitions off.
+- The transition lock now actually stops themed colors from transitioning. It released on the next animation frame without computing styles first, and a browser runs that callback before the frame's style pass, so the new theme and the release were applied together and every `transition-colors` element still faded through the old theme. The lock now reads a computed style while transitions are off and releases before `setTheme` returns.
+
 ## [1.2.0]
 
 ### Added

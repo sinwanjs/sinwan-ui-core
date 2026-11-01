@@ -82,19 +82,23 @@ function getSystemTheme(): ResolvedTheme {
     : "light";
 }
 
+/**
+ * Turns CSS transitions off while the theme is written. Only transitions:
+ * lifting an `animation: none` restarts every animation on the page, so
+ * entrance animations would replay on each switch.
+ */
 function disableTransitionsTemporarily(): () => void {
   const style = document.createElement("style");
   style.appendChild(
-    document.createTextNode(
-      "*,*::before,*::after{transition:none!important;animation:none!important}",
-    ),
+    document.createTextNode("*,*::before,*::after{transition:none!important}"),
   );
   document.head.appendChild(style);
   return () => {
-    window.getComputedStyle(document.body);
-    requestAnimationFrame(() => {
-      style.parentNode?.removeChild(style);
-    });
+    // Reading a property computes the new theme while transitions are off;
+    // without it the change and the release share one style pass and every
+    // themed color still transitions.
+    void window.getComputedStyle(document.body).opacity;
+    style.parentNode?.removeChild(style);
   };
 }
 
