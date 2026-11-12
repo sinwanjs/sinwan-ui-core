@@ -23,8 +23,8 @@ Import from the root barrel or from a subpath (subpaths keep bundles small):
 | Subpath | Contents |
 | --- | --- |
 | `sinwan-ui-core/core` | `Presence` (keeps content mounted through CSS exit), `UiPortal`, `useControllableState`, `getFocusableElements`, `trapFocus`; re-exports the positioning helpers from `floating` |
-| `sinwan-ui-core/overlay` | Dialog, Collapsible, Popover and Tooltip primitives (`DialogRoot`, `DialogTrigger`, `DialogOverlay`, `DialogContent`, `PopoverRoot`, …), their injection keys and `OpenApi` |
-| `sinwan-ui-core/controls` | Tabs, Accordion, Checkbox, Switch, RadioGroup (WAI-ARIA arrow keys and a single tab stop), Toggle and ToggleGroup primitives with injection keys |
+| `sinwan-ui-core/overlay` | Dialog, Collapsible, Popover and Tooltip primitives (`DialogRoot`, `DialogTrigger`, `DialogOverlay`, `DialogContent` with `role="alertdialog"`, `DialogTitle` and `DialogDescription`, which name and describe the dialog, `PopoverRoot`, …), their injection keys and `OpenApi` |
+| `sinwan-ui-core/controls` | Tabs and RadioGroup (WAI-ARIA arrow keys and a single tab stop), Accordion, Checkbox, Switch, Toggle and ToggleGroup primitives with injection keys. Roots forward `aria-*` attributes |
 | `sinwan-ui-core/floating` | `useAnchorPosition`, `usePointPosition`, `computePosition`, `estimatePosition` and placement helpers (Floating UI based) |
 | `sinwan-ui-core/dismiss` | `isDismissExemptPointerTarget` for outside-press handling across portaled layers |
 | `sinwan-ui-core/menu-sub` | `createMenuSubApi` (closes with its `parentOpen`), `createMenuSubTriggerHandlers`, `isInsideMenuSubContent`, `MenuSubContentLayer` for nested menus |

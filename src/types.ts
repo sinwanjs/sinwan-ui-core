@@ -8,6 +8,8 @@ export type TextareaHTMLProps = JSX.IntrinsicElements["textarea"];
 export type LabelHTMLProps = JSX.IntrinsicElements["label"];
 export type AnchorHTMLProps = JSX.IntrinsicElements["a"];
 export type SpanProps = JSX.IntrinsicElements["span"];
+export type HeadingProps = JSX.IntrinsicElements["h2"];
+export type ParagraphProps = JSX.IntrinsicElements["p"];
 export type SVGProps = JSX.IntrinsicElements["svg"];
 
 export function isSinwanElement(node: SinwanNode): node is SinwanElement {

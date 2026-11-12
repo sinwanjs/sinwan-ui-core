@@ -2,6 +2,24 @@
 
 All notable changes to this package are documented in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package uses [Semantic Versioning](https://semver.org/).
 
+## [1.3.0]
+
+### Added
+
+- Tabs follow the WAI-ARIA tabs pattern (`controls`). The tab list has a single tab stop (the active tab, or the first enabled one). Left and Right move between tabs, Up and Down when the root is `orientation="vertical"`, and Home and End jump to the first and last tab. Moving selects the tab (automatic activation) and skips disabled tabs. Left and Right swap inside a `DirectionProvider dir="rtl"`. Each tab and its panel are linked (`id`, `aria-controls`, `aria-labelledby`), the panel is focusable, and the list has `aria-orientation`.
+- `DialogTitle` and `DialogDescription` (`overlay`): a heading and a paragraph that name and describe their dialog. Inside a `DialogRoot`, `DialogContent` gets `aria-labelledby` and `aria-describedby` pointing at them, so screen readers announce the dialog's title when it opens. An `id` you pass is kept and used. `DialogLabelsKey` and the `DialogLabels` type are exported.
+- `DialogContent` takes `role="alertdialog"` for dialogs that interrupt to ask for a decision (the default stays `dialog`), and passes `aria-*` attributes through. An `aria-labelledby` or `aria-describedby` you pass wins over the automatic one.
+- `TabsKey` gains optional `orientation`, `idOf`, `register`, `tabStop` and `move`. A context provided by hand without them still works, without the keyboard behaviour.
+- Exported types: `AriaProps`, `RovingMove`, `HeadingProps`, `ParagraphProps`.
+
+### Fixed
+
+- `SwitchRoot`, `RadioGroupRoot` and `TabsList` forward `aria-*` attributes to their element, as `ToggleGroupRoot` already did. Before, an `aria-label` such as "Payment method" was dropped, so screen readers announced an unnamed switch, radio group or tab list. Attributes the primitive owns (`aria-checked`, `aria-orientation`) still win.
+
+### Changed
+
+- The radio group shares its roving-focus code with tabs. Its behaviour is unchanged (its keyboard tests pass as before).
+
 ## [1.2.1]
 
 ### Fixed

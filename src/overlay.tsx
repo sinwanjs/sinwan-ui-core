@@ -1,10 +1,12 @@
 import {
   cc,
+  getRawProps,
   inject,
   onMounted,
   onUnmounted,
   provide,
   type InjectionKey,
+  type SinwanComponent,
   type SinwanNode,
 } from "sinwan/component";
 import { computed, signal, type Computed, type Signal } from "sinwan/reactivity";
@@ -19,6 +21,7 @@ import {
   type Placement,
 } from "./core";
 import { isDismissExemptPointerTarget } from "./dismiss";
+import type { HeadingProps, ParagraphProps } from "./types";
 
 export type OpenApi = {
   open: Signal<boolean> | Computed<boolean>;
@@ -110,10 +113,58 @@ export type DialogRootProps = {
   onOpenChange?: (open: boolean) => void;
 };
 
+/** Which title and description name the open dialog (`aria-labelledby` / `aria-describedby`). */
+export type DialogLabels = {
+  title: Signal<string | null>;
+  description: Signal<string | null>;
+  baseId: string;
+};
+
+export const DialogLabelsKey: InjectionKey<DialogLabels> = Symbol("sinwan-ui.dialog-labels");
+
+let dialogCount = 0;
+
 export const DialogRoot = cc<DialogRootProps>((props) => {
   const api = createOpenState(props);
   provide(DialogKey, api);
+  dialogCount += 1;
+  provide(DialogLabelsKey, { title: signal<string | null>(null), description: signal<string | null>(null), baseId: `sinwan-ui-dialog-${dialogCount}` });
   return <>{props.children}</>;
+});
+
+/** Gives a dialog part its id and makes it the dialog's name or description while mounted. */
+function useDialogLabel(part: "title" | "description", id: unknown): string | undefined {
+  const labels = inject(DialogLabelsKey, null);
+  const own = typeof id === "string" && id !== "" ? id : labels ? `${labels.baseId}-${part}` : undefined;
+  if (labels && own) {
+    labels[part].value = own;
+    onUnmounted(() => {
+      if (labels[part].value === own) labels[part].value = null;
+    });
+  }
+  return own;
+}
+
+/** The dialog's heading. Inside a `DialogRoot` it names the dialog (`aria-labelledby`). */
+export const DialogTitle: SinwanComponent<HeadingProps> = cc<HeadingProps>((props) => {
+  const { children, id, ...rest } = getRawProps(props);
+  const own = useDialogLabel("title", id);
+  return (
+    <h2 data-slot="dialog-title" {...rest} id={own}>
+      {children}
+    </h2>
+  );
+});
+
+/** The dialog's description. Inside a `DialogRoot` it describes the dialog (`aria-describedby`). */
+export const DialogDescription: SinwanComponent<ParagraphProps> = cc<ParagraphProps>((props) => {
+  const { children, id, ...rest } = getRawProps(props);
+  const own = useDialogLabel("description", id);
+  return (
+    <p data-slot="dialog-description" {...rest} id={own}>
+      {children}
+    </p>
+  );
 });
 
 export const DialogTrigger = cc<{
@@ -203,16 +254,20 @@ export const DialogOverlay = cc<{ class?: string }>(({ class: className }) => {
 export const DialogContent = cc<{
   children?: SinwanNode;
   class?: string;
+  /** `alertdialog` for a dialog that interrupts to ask for a decision. */
+  role?: "dialog" | "alertdialog";
   onEscapeKeyDown?: (e: KeyboardEvent) => void;
   "data-side"?: string;
   "data-size"?: string;
   "data-vaul-drawer-direction"?: string;
   "data-slot"?: string;
   [key: `data-${string}`]: string | undefined;
+  [key: `aria-${string}`]: string | boolean | undefined;
 }>(
   ({
     children,
     class: className,
+    role = "dialog",
     onEscapeKeyDown,
     "data-side": dataSide,
     "data-size": dataSize,
@@ -221,6 +276,7 @@ export const DialogContent = cc<{
     ...dataAttrs
   }) => {
     const api = inject(DialogKey)!;
+    const labels = inject(DialogLabelsKey, null);
     let contentEl: HTMLElement | null = null;
     let previousFocus: HTMLElement | null = null;
 
@@ -249,8 +305,14 @@ export const DialogContent = cc<{
       >
         <UiPortal>
           <div
+            aria-labelledby={function labelledBy() {
+              return labels?.title.value ?? undefined;
+            }}
+            aria-describedby={function describedBy() {
+              return labels?.description.value ?? undefined;
+            }}
             {...dataAttrs}
-            role="dialog"
+            role={role}
             aria-modal="true"
             data-slot={dataSlot}
             data-state={contentState}

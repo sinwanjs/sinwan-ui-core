@@ -10,11 +10,105 @@ function toValueList(v: string | string[] | undefined): string[] {
   return Array.isArray(v) ? v : v ? [v] : [];
 }
 
+/** `aria-*` attributes a primitive passes through to its element. */
+export type AriaProps = { [key: `aria-${string}`]: string | boolean | undefined };
+
+/** The `aria-*` props, raw so getters and signals (a reactive `aria-label`) stay live. */
+function ariaOf(props: object): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(getRawProps(props)).filter(([key]) => key.startsWith("aria-")));
+}
+
+let idCount = 0;
+
+/** A document-unique id for linking parts with `aria-controls` / `aria-labelledby`. */
+function nextId(prefix: string): string {
+  idCount += 1;
+  return `sinwan-ui-${prefix}-${idCount}`;
+}
+
+/** A value as an id fragment: values may hold spaces or other characters ids cannot. */
+function idPart(value: string): string {
+  return value.replace(/[^A-Za-z0-9_-]/g, "_");
+}
+
+/** An item of a roving-focus group (radio group, tab list). */
+export type RadioGroupEntry = {
+  value: () => string;
+  disabled: () => boolean;
+  el: HTMLElement;
+};
+
+/** Where an arrow, Home or End key moves in a roving-focus group. */
+export type RovingMove = 1 | -1 | "first" | "last";
+
+const DOCUMENT_POSITION_FOLLOWING = 4;
+
+/** Sorts items by position in the document (keydown time only). */
+function inDocumentOrder(a: RadioGroupEntry, b: RadioGroupEntry): number {
+  return a.el.compareDocumentPosition(b.el) & DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+}
+
+/**
+ * One tab stop for a group of items, moved with the keyboard (WAI-ARIA radio
+ * group and tabs). The tab stop is the selected enabled item, else the first
+ * enabled one. Items register while still in a detached template fragment, so
+ * document order is read only on keydown.
+ */
+function createRovingFocus(value: Signal<string> | Computed<string>, select: (next: string) => void) {
+  const entries = signal<readonly RadioGroupEntry[]>([]);
+  const enabled = () => entries.value.filter((entry) => !entry.disabled());
+  return {
+    register: (entry: RadioGroupEntry) => {
+      entries.value = [...entries.value, entry];
+      return () => {
+        entries.value = entries.value.filter((other) => other !== entry);
+      };
+    },
+    tabStop: computed(() => {
+      const list = enabled();
+      return (list.find((entry) => entry.value() === value.value) ?? list[0])?.value();
+    }),
+    move: (from: string, step: RovingMove) => {
+      const list = enabled().sort(inDocumentOrder);
+      if (list.length === 0) return;
+      const index = list.findIndex((entry) => entry.value() === from);
+      let next: RadioGroupEntry;
+      if (step === "first") next = list[0]!;
+      else if (step === "last") next = list[list.length - 1]!;
+      else if (index === -1) next = list[step === 1 ? 0 : list.length - 1]!;
+      else next = list[(index + step + list.length) % list.length]!;
+      next.el.focus();
+      select(next.value());
+    },
+  };
+}
+
+/** Registers an item with its roving group from its `ref`, and unregisters it on unmount. */
+function useRovingItem(register: (entry: RadioGroupEntry) => () => void, entry: Omit<RadioGroupEntry, "el">) {
+  let unregister: (() => void) | undefined;
+  onUnmounted(() => unregister?.());
+  return (el: HTMLElement | null) => {
+    if (el && !unregister) unregister = register({ ...entry, el });
+  };
+}
+
+const LTR: Pick<DirectionApi, "dir"> = { dir: { value: "ltr" } };
+
 // ─── Tabs ───────────────────────────────────────────────────
 
 export const TabsKey: InjectionKey<{
   value: Signal<string> | Computed<string>;
   setValue: (v: string) => void;
+  /** Arrow keys follow it: Left/Right when horizontal, Up/Down when vertical. */
+  orientation?: () => "horizontal" | "vertical";
+  /** Id of a tab (`part: "trigger"`) or of its panel (`part: "content"`). */
+  idOf?: (value: string, part: "trigger" | "content") => string;
+  /** Adds a tab to the keyboard order; returns its removal. */
+  register?: (entry: RadioGroupEntry) => () => void;
+  /** Value of the one tab that is in the tab order. */
+  tabStop?: Computed<string | undefined>;
+  /** Moves focus and selection (automatic activation). */
+  move?: (from: string, step: RovingMove) => void;
 }> = Symbol("sinwan-ui.tabs");
 
 export const TabsRoot = cc<{
@@ -31,12 +125,17 @@ export const TabsRoot = cc<{
   const set = (next: string) => {
     if (!("value" in props)) valueLocal.value = next;
   };
+  const setValue = (v: string) => {
+    set(v);
+    props.onValueChange?.(v);
+  };
+  const baseId = nextId("tabs");
   provide(TabsKey, {
     value,
-    setValue: (v: string) => {
-      set(v);
-      props.onValueChange?.(v);
-    },
+    setValue,
+    orientation: () => props.orientation ?? "horizontal",
+    idOf: (tab: string, part: "trigger" | "content") => `${baseId}-${part}-${idPart(tab)}`,
+    ...createRovingFocus(value, setValue),
   });
   return (
     <div
@@ -51,20 +150,37 @@ export const TabsRoot = cc<{
   );
 });
 
-export const TabsList = cc<{
-  children?: SinwanNode;
-  class?: string;
-  "data-variant"?: string;
-}>(({ children, class: className, "data-variant": dataVariant }) => (
-  <div
-    role="tablist"
-    data-slot="tabs-list"
-    data-variant={dataVariant}
-    class={className}
-  >
-    {children}
-  </div>
-));
+export const TabsList = cc<
+  {
+    children?: SinwanNode;
+    class?: string;
+    "data-variant"?: string;
+  } & AriaProps
+>((props) => {
+  const api = inject(TabsKey, null);
+  return (
+    <div
+      {...ariaOf(props)}
+      role="tablist"
+      aria-orientation={api?.orientation?.() ?? "horizontal"}
+      data-slot="tabs-list"
+      data-variant={props["data-variant"]}
+      class={props.class}
+    >
+      {props.children}
+    </div>
+  );
+});
+
+/** Arrow, Home or End key to a move; 0 for any other key. Left/Right swap in RTL. */
+function tabStep(key: string, orientation: "horizontal" | "vertical", dir: DirectionApi["dir"]["value"]): RovingMove | 0 {
+  if (key === "Home") return "first";
+  if (key === "End") return "last";
+  if (orientation === "vertical") return key === "ArrowDown" ? 1 : key === "ArrowUp" ? -1 : 0;
+  const forward = dir === "rtl" ? "ArrowLeft" : "ArrowRight";
+  const backward = dir === "rtl" ? "ArrowRight" : "ArrowLeft";
+  return key === forward ? 1 : key === backward ? -1 : 0;
+}
 
 export const TabsTrigger = cc<{
   children?: SinwanNode;
@@ -73,18 +189,31 @@ export const TabsTrigger = cc<{
   disabled?: boolean;
 }>(({ children, class: className, value, disabled }) => {
   const api = inject(TabsKey)!;
+  const direction = inject<Pick<DirectionApi, "dir">>(DirectionKey, LTR);
+  const register = api.register;
+  const ref = register ? useRovingItem(register, { value: () => value, disabled: () => Boolean(disabled) }) : undefined;
   return (
     <button
+      ref={ref}
       type="button"
       role="tab"
+      id={api.idOf?.(value, "trigger")}
       data-slot="tabs-trigger"
       data-state={api.value.value === value ? "active" : "inactive"
       }
       aria-selected={api.value.value === value}
+      aria-controls={api.value.value === value ? api.idOf?.(value, "content") : undefined}
+      tabIndex={api.tabStop ? (api.tabStop.value === value ? 0 : -1) : undefined}
       disabled={disabled}
       class={className}
       onclick={() => {
         if (!disabled) api.setValue(value);
+      }}
+      onkeydown={(event: KeyboardEvent) => {
+        const step = tabStep(event.key, api.orientation?.() ?? "horizontal", direction.dir.value);
+        if (step === 0 || !api.move) return;
+        event.preventDefault();
+        api.move(value, step);
       }}
     >
       {children}
@@ -102,6 +231,9 @@ export const TabsContent = cc<{
     <Show when={api.value.value === value}>
       <div
         role="tabpanel"
+        id={api.idOf?.(value, "content")}
+        aria-labelledby={api.idOf?.(value, "trigger")}
+        tabIndex={0}
         data-slot="tabs-content"
         data-state="active"
         class={className}
@@ -302,16 +434,18 @@ export const CheckboxRoot = cc<{
   );
 });
 
-export const SwitchRoot = cc<{
-  checked?: boolean;
-  defaultChecked?: boolean;
-  onCheckedChange?: (checked: boolean) => void;
-  disabled?: boolean;
-  class?: string;
-  id?: string;
-  children?: SinwanNode;
-  "data-size"?: string;
-}>((props) => {
+export const SwitchRoot = cc<
+  {
+    checked?: boolean;
+    defaultChecked?: boolean;
+    onCheckedChange?: (checked: boolean) => void;
+    disabled?: boolean;
+    class?: string;
+    id?: string;
+    children?: SinwanNode;
+    "data-size"?: string;
+  } & AriaProps
+>((props) => {
   const checkedLocal = signal(props.defaultChecked ?? false);
   const checked =
     "checked" in props ? computed(() => Boolean(props.checked)) : checkedLocal;
@@ -320,6 +454,7 @@ export const SwitchRoot = cc<{
   };
   return (
     <button
+      {...ariaOf(props)}
       type="button"
       role="switch"
       id={props.id}
@@ -341,13 +476,6 @@ export const SwitchRoot = cc<{
   );
 });
 
-/** A radio registered with its group for roving focus. */
-export type RadioGroupEntry = {
-  value: () => string;
-  disabled: () => boolean;
-  el: HTMLElement;
-};
-
 export const RadioGroupKey: InjectionKey<{
   value: Signal<string> | Computed<string>;
   setValue: (v: string) => void;
@@ -360,21 +488,16 @@ export const RadioGroupKey: InjectionKey<{
   move: (from: string, step: 1 | -1) => void;
 }> = Symbol("sinwan-ui.radio-group");
 
-const DOCUMENT_POSITION_FOLLOWING = 4;
-
-/** Sorts radios by position in the document (keydown time only). */
-function inDocumentOrder(a: RadioGroupEntry, b: RadioGroupEntry): number {
-  return a.el.compareDocumentPosition(b.el) & DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
-}
-
-export const RadioGroupRoot = cc<{
-  children?: SinwanNode;
-  value?: string;
-  defaultValue?: string;
-  onValueChange?: (v: string) => void;
-  class?: string;
-  name?: string;
-}>((props) => {
+export const RadioGroupRoot = cc<
+  {
+    children?: SinwanNode;
+    value?: string;
+    defaultValue?: string;
+    onValueChange?: (v: string) => void;
+    class?: string;
+    name?: string;
+  } & AriaProps
+>((props) => {
   const valueLocal = signal(props.defaultValue ?? "");
   const value =
     "value" in props ? computed(() => props.value ?? "") : valueLocal;
@@ -385,46 +508,22 @@ export const RadioGroupRoot = cc<{
     set(v);
     props.onValueChange?.(v);
   };
-  const entries = signal<readonly RadioGroupEntry[]>([]);
-  // Registration follows render order. Radios register while still in a
-  // detached template fragment, so document order is read only on keydown.
-  const enabled = () => entries.value.filter((entry) => !entry.disabled());
   // WAI-ARIA radio group: the checked radio, else the first enabled one.
-  const tabStop = computed(() => {
-    const list = enabled();
-    return (list.find((entry) => entry.value() === value.value) ?? list[0])?.value();
-  });
+  const roving = createRovingFocus(value, setValue);
   provide(RadioGroupKey, {
     value,
     name: props.name,
     setValue,
-    register: (entry: RadioGroupEntry) => {
-      entries.value = [...entries.value, entry];
-      return () => {
-        entries.value = entries.value.filter((other) => other !== entry);
-      };
-    },
-    tabStop,
-    move: (from: string, step: 1 | -1) => {
-      const list = enabled().sort(inDocumentOrder);
-      if (list.length === 0) return;
-      const index = list.findIndex((entry) => entry.value() === from);
-      const next =
-        index === -1
-          ? list[step === 1 ? 0 : list.length - 1]!
-          : list[(index + step + list.length) % list.length]!;
-      next.el.focus();
-      setValue(next.value());
-    },
+    register: roving.register,
+    tabStop: roving.tabStop,
+    move: roving.move,
   });
   return (
-    <div role="radiogroup" data-slot="radio-group" class={props.class}>
+    <div {...ariaOf(props)} role="radiogroup" data-slot="radio-group" class={props.class}>
       {props.children}
     </div>
   );
 });
-
-const LTR: Pick<DirectionApi, "dir"> = { dir: { value: "ltr" } };
 
 /** Arrow key to step: Down/Right = next, Up/Left = previous (Left/Right swap in RTL). */
 function radioStep(key: string, dir: DirectionApi["dir"]["value"]): 1 | -1 | 0 {
@@ -444,19 +543,10 @@ export const RadioGroupItem = cc<{
 }>((props) => {
   const api = inject(RadioGroupKey)!;
   const direction = inject<Pick<DirectionApi, "dir">>(DirectionKey, LTR);
-  let unregister: (() => void) | undefined;
-  onUnmounted(() => unregister?.());
+  const ref = useRovingItem(api.register, { value: () => props.value, disabled: () => Boolean(props.disabled) });
   return (
     <button
-      ref={(el: HTMLButtonElement | null) => {
-        if (el && !unregister) {
-          unregister = api.register({
-            value: () => props.value,
-            disabled: () => Boolean(props.disabled),
-            el,
-          });
-        }
-      }}
+      ref={ref}
       type="button"
       role="radio"
       id={props.id}
@@ -538,10 +628,7 @@ export const ToggleGroupRoot = cc<{
   [key: `aria-${string}`]: string | boolean | undefined;
 }>((props) => {
   const type = props.type ?? "single";
-  // Raw values keep getters, so a signal-driven aria-label stays live.
-  const ariaProps = Object.fromEntries(
-    Object.entries(getRawProps(props)).filter(([key]) => key.startsWith("aria-")),
-  );
+  const ariaProps = ariaOf(props);
   const valueLocal = signal(toValueList(props.defaultValue));
   const value =
     "value" in props ? computed(() => toValueList(props.value)) : valueLocal;
