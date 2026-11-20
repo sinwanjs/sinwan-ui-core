@@ -251,6 +251,18 @@ export const DialogOverlay = cc<{ class?: string }>(({ class: className }) => {
   );
 });
 
+/**
+ * Whether a closing dialog should hand focus back to what opened it: focus
+ * is still inside the dialog, or was lost (`body`, nothing, or a removed
+ * element). Focus the app moved elsewhere on purpose (a field to fill next)
+ * stays where it is.
+ */
+function focusIsInsideOrLost(content: HTMLElement | null): boolean {
+  const active = document.activeElement;
+  if (!active || active === document.body || !active.isConnected) return true;
+  return content?.contains(active) ?? false;
+}
+
 export const DialogContent = cc<{
   children?: SinwanNode;
   class?: string;
@@ -321,13 +333,17 @@ export const DialogContent = cc<{
             data-vaul-drawer-direction={dataDrawerDirection}
             class={className}
             ref={function contentRef(el: HTMLElement | null) {
-              contentEl = el;
               if (el) {
+                contentEl = el;
                 previousFocus = document.activeElement as HTMLElement | null;
                 el.focus?.();
-              } else if (previousFocus) {
-                previousFocus.focus?.();
+                return;
               }
+              const closing = contentEl;
+              const restore = previousFocus;
+              contentEl = null;
+              previousFocus = null;
+              if (restore && focusIsInsideOrLost(closing)) restore.focus?.();
             }}
             tabIndex={-1}
             onclick={function stopBubble(e: MouseEvent) {

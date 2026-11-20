@@ -2,6 +2,12 @@
 
 All notable changes to this package are documented in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package uses [Semantic Versioning](https://semver.org/).
 
+## [1.3.1]
+
+### Fixed
+
+- A closing `DialogContent` (dialogs, sheets, drawers, alert dialogs) gives focus back to what opened it only when focus is still inside the dialog or was lost. Before, it always refocused the trigger once the exit animation ended, about 200 ms after closing. That undid focus the app had moved on purpose: after scanning a label, the quantity field lost focus to the "Scan" button.
+
 ## [1.3.0]
 
 ### Added

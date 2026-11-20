@@ -141,6 +141,70 @@ describe("dialog", () => {
     expect(open).toBe(false);
     ui.unmount();
   });
+
+  /** A trigger that opens a dialog, and a field outside it. */
+  const scanUi = () =>
+    mountUi(() => (
+      <>
+        <input data-slot="field" />
+        <DialogRoot>
+          <DialogTrigger asChild>
+            <button type="button" data-slot="trigger">
+              Scan
+            </button>
+          </DialogTrigger>
+          <DialogContent data-slot="scan">
+            <button type="button" data-slot="inside">
+              Inside
+            </button>
+          </DialogContent>
+        </DialogRoot>
+      </>
+    ));
+
+  test("closing keeps focus that the app moved out of the dialog", async () => {
+    const ui = scanUi();
+    const trigger = query('[data-slot="trigger"]');
+    trigger.focus();
+    ui.click('[data-slot="trigger"]');
+    await flush();
+    expect(document.activeElement).toBe(query('[data-slot="scan"]'));
+    // The app moves focus on purpose (a scanned product's quantity field), then closes the dialog.
+    const field = query('[data-slot="field"]');
+    field.focus();
+    escape();
+    await wait(300);
+    expect(ui.query('[data-slot="scan"]')).toBeNull();
+    expect(document.activeElement).toBe(field);
+    ui.unmount();
+  });
+
+  test("closing returns focus to the trigger when focus was lost", async () => {
+    const ui = scanUi();
+    const trigger = query('[data-slot="trigger"]');
+    trigger.focus();
+    ui.click('[data-slot="trigger"]');
+    await flush();
+    query('[data-slot="scan"]').blur();
+    expect(document.activeElement).toBe(document.body);
+    escape();
+    await wait(300);
+    expect(document.activeElement).toBe(trigger);
+    ui.unmount();
+  });
+
+  test("closing returns focus to the trigger from an element inside the dialog", async () => {
+    const ui = scanUi();
+    const trigger = query('[data-slot="trigger"]');
+    trigger.focus();
+    ui.click('[data-slot="trigger"]');
+    await flush();
+    query('[data-slot="inside"]').focus();
+    escape();
+    await wait(300);
+    expect(document.activeElement).toBe(trigger);
+    ui.unmount();
+  });
 });
 
 describe("collapsible", () => {
