@@ -2,6 +2,7 @@ import { cc, getRawProps, inject, onUnmounted, provide, type InjectionKey, type 
 import { For, Show } from "sinwan/control-flow";
 import { computed, signal, type Computed, type Signal } from "sinwan/reactivity";
 import { Slot } from "./slot";
+import { isControlledProp } from "./internal/controlled";
 import { Presence } from "./core";
 import { DirectionKey, type DirectionApi } from "./direction";
 
@@ -121,7 +122,7 @@ export const TabsRoot = cc<{
 }>((props) => {
   const valueLocal = signal(props.defaultValue ?? "");
   const value =
-    "value" in props ? computed(() => props.value ?? "") : valueLocal;
+    isControlledProp(props, "value", "TabsRoot") ? computed(() => props.value ?? "") : valueLocal;
   const set = (next: string) => {
     if (!("value" in props)) valueLocal.value = next;
   };
@@ -269,7 +270,7 @@ export const AccordionRoot = cc<{
   const collapsible = props.collapsible ?? true;
   const valueLocal = signal(toValueList(props.defaultValue));
   const value =
-    "value" in props ? computed(() => toValueList(props.value)) : valueLocal;
+    isControlledProp(props, "value", "AccordionRoot") ? computed(() => toValueList(props.value)) : valueLocal;
   const set = (next: string[]) => {
     if (!("value" in props)) valueLocal.value = next;
   };
@@ -395,7 +396,7 @@ export const CheckboxRoot = cc<{
 }>((props) => {
   const checkedLocal = signal(props.defaultChecked ?? false);
   const checked =
-    "checked" in props ? computed(() => Boolean(props.checked)) : checkedLocal;
+    isControlledProp(props, "checked", "CheckboxRoot") ? computed(() => Boolean(props.checked)) : checkedLocal;
   const setChecked = (next: boolean) => {
     if (!("checked" in props)) checkedLocal.value = next;
   };
@@ -448,7 +449,7 @@ export const SwitchRoot = cc<
 >((props) => {
   const checkedLocal = signal(props.defaultChecked ?? false);
   const checked =
-    "checked" in props ? computed(() => Boolean(props.checked)) : checkedLocal;
+    isControlledProp(props, "checked", "SwitchRoot") ? computed(() => Boolean(props.checked)) : checkedLocal;
   const set = (next: boolean) => {
     if (!("checked" in props)) checkedLocal.value = next;
   };
@@ -500,7 +501,7 @@ export const RadioGroupRoot = cc<
 >((props) => {
   const valueLocal = signal(props.defaultValue ?? "");
   const value =
-    "value" in props ? computed(() => props.value ?? "") : valueLocal;
+    isControlledProp(props, "value", "RadioGroupRoot") ? computed(() => props.value ?? "") : valueLocal;
   const set = (next: string) => {
     if (!("value" in props)) valueLocal.value = next;
   };
@@ -631,7 +632,7 @@ export const ToggleGroupRoot = cc<{
   const ariaProps = ariaOf(props);
   const valueLocal = signal(toValueList(props.defaultValue));
   const value =
-    "value" in props ? computed(() => toValueList(props.value)) : valueLocal;
+    isControlledProp(props, "value", "ToggleGroupRoot") ? computed(() => toValueList(props.value)) : valueLocal;
   const set = (next: string[]) => {
     if (!("value" in props)) valueLocal.value = next;
   };

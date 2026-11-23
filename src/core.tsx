@@ -1,6 +1,7 @@
 import { cc, onMounted, onUnmounted, type SinwanNode } from "sinwan/component";
 import { Portal as SinwanPortal, Show } from "sinwan/control-flow";
 import { effect, signal, untrack, type Signal } from "sinwan/reactivity";
+import { isControlledProp } from "./internal/controlled";
 
 export type PresenceProps = {
   present?: boolean;
@@ -83,7 +84,7 @@ export function useControllableState<T>(options: {
   defaultValue: T;
   onChange?: (value: T) => void;
 }): [Signal<T>, (value: T | ((prev: T) => T)) => void] {
-  const isControlled = "value" in options;
+  const isControlled = isControlledProp(options, "value", "useControllableState");
   const read = (): T =>
     isControlled ? readOptionValue<T>(options.value) : options.defaultValue;
   const state = signal<T>(isControlled ? read() : options.defaultValue);

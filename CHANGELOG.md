@@ -2,6 +2,16 @@
 
 All notable changes to this package are documented in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package uses [Semantic Versioning](https://semver.org/).
 
+## [1.5.0]
+
+### Added
+
+- **SW202, a controlled prop that is `undefined`**: in development, `TabsRoot`, `AccordionRoot`, `RadioGroupRoot` and `ToggleGroupRoot` (`value`), `CheckboxRoot` and `SwitchRoot` (`checked`), `DialogRoot`, `PopoverRoot`, `TooltipRoot` and `CollapsibleRoot` (`open`), and `useControllableState` warn once when the prop is present but `undefined`. For example: `[Sinwan] SW202: <SwitchRoot> checked is undefined: the control is controlled with no value and ignores input…`. Before, the control silently ignored clicks and keys. Behaviour is unchanged: a present prop still makes the control controlled. The check uses `devWarn` from `sinwan/dev`, so the production bundle of sinwan prints nothing and does no extra work.
+
+### Changed
+
+- **Requires `sinwan` 2.5.0 or later** (peer `>=2.5.0 <3.0.0`) for `sinwan/dev`. `sinwan/dev` is kept as a bare external import in `dist/`.
+
 ## [1.4.0]
 
 ### Added

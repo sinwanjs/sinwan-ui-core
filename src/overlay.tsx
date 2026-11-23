@@ -11,6 +11,7 @@ import {
 } from "sinwan/component";
 import { computed, signal, type Computed, type Signal } from "sinwan/reactivity";
 import { Slot } from "./slot";
+import { isControlledProp } from "./internal/controlled";
 
 import {
   Presence,
@@ -41,10 +42,11 @@ type OpenProps = {
 
 const REOPEN_LOCK_MS = 280;
 
-function createOpenState(props: OpenProps): OpenApi {
+function createOpenState(props: OpenProps, component: string): OpenApi {
   const openLocal = signal(props.defaultOpen ?? false);
-  const open =
-    "open" in props ? computed(() => Boolean(props.open)) : openLocal;
+  const open = isControlledProp(props, "open", component)
+    ? computed(() => Boolean(props.open))
+    : openLocal;
   const set = (next: boolean) => {
     if (!("open" in props)) openLocal.value = next;
   };
@@ -125,7 +127,7 @@ export const DialogLabelsKey: InjectionKey<DialogLabels> = Symbol("sinwan-ui.dia
 let dialogCount = 0;
 
 export const DialogRoot = cc<DialogRootProps>((props) => {
-  const api = createOpenState(props);
+  const api = createOpenState(props, "DialogRoot");
   provide(DialogKey, api);
   dialogCount += 1;
   provide(DialogLabelsKey, { title: signal<string | null>(null), description: signal<string | null>(null), baseId: `sinwan-ui-dialog-${dialogCount}` });
@@ -374,7 +376,7 @@ export const CollapsibleRoot = cc<{
 }>((props) => {
   const openLocal = signal(props.defaultOpen ?? false);
   const open =
-    "open" in props ? computed(() => Boolean(props.open)) : openLocal;
+    isControlledProp(props, "open", "CollapsibleRoot") ? computed(() => Boolean(props.open)) : openLocal;
   const set = (next: boolean) => {
     if (!("open" in props)) openLocal.value = next;
   };
@@ -482,7 +484,7 @@ export const PopoverRoot = cc<{
   placement?: Placement;
   align?: Align;
 }>((props) => {
-  const api = createOpenState(props);
+  const api = createOpenState(props, "PopoverRoot");
   provide(PopoverKey, {
     ...api,
     placement: props.placement ?? "bottom",
@@ -628,7 +630,7 @@ export const TooltipRoot = cc<{
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
 }>((props) => {
-  const api = createOpenState(props);
+  const api = createOpenState(props, "TooltipRoot");
   provide(TooltipKey, api);
   return <>{props.children}</>;
 });

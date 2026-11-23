@@ -14,6 +14,7 @@ const SINWAN_EXTERNALS = [
   "sinwan/reactivity",
   "sinwan/component",
   "sinwan/control-flow",
+  "sinwan/dev",
   "sinwan/jsx-runtime",
   "sinwan/renderer",
 ] as const;
