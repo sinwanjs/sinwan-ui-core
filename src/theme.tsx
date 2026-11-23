@@ -11,9 +11,9 @@ import { batch, computed, signal, type Signal } from "sinwan/reactivity";
 
 export type Theme = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
-export type Palette = "credit-blue" | "jomlaty" | "cazview";
+export type Palette = "carzow" | "jomlaty" | "cazview" | "voltzig";
 
-const DEFAULT_PALETTES: Palette[] = ["credit-blue", "jomlaty", "cazview"];
+const DEFAULT_PALETTES: Palette[] = ["carzow", "jomlaty", "cazview", "voltzig"];
 
 export type ThemeApi = {
   theme: Signal<Theme>;
@@ -128,7 +128,7 @@ export const ThemeProvider = cc<ThemeProviderProps>(
     defaultTheme = "system",
     forcedTheme,
     storageKey = "sinwan-ui-theme",
-    defaultPalette = "credit-blue",
+    defaultPalette = "carzow",
     forcedPalette,
     paletteStorageKey = "sinwan-ui-palette",
     palettes = DEFAULT_PALETTES,

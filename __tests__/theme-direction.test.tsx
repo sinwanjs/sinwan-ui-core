@@ -287,16 +287,16 @@ describe("ThemeProvider", () => {
     expect(() => withSetup(() => useTheme())).toThrow(/ThemeProvider/);
   });
 
-  test("defaults to credit-blue palette and switches via setPalette", () => {
+  test("defaults to carzow palette and switches via setPalette", () => {
     const { api, Capture } = captureTheme();
     const { unmount } = mountUi(() => (
       <ThemeProvider defaultTheme="light">
         <Capture />
       </ThemeProvider>
     ));
-    expect(api().palette.value).toBe("credit-blue");
-    expect(api().palettes).toEqual(["credit-blue", "jomlaty", "cazview"]);
-    expect(html().getAttribute("data-palette")).toBe("credit-blue");
+    expect(api().palette.value).toBe("carzow");
+    expect(api().palettes).toEqual(["carzow", "jomlaty", "cazview", "voltzig"]);
+    expect(html().getAttribute("data-palette")).toBe("carzow");
     api().setPalette("jomlaty");
     expect(api().palette.value).toBe("jomlaty");
     expect(html().getAttribute("data-palette")).toBe("jomlaty");
@@ -305,6 +305,10 @@ describe("ThemeProvider", () => {
     expect(api().palette.value).toBe("cazview");
     expect(html().getAttribute("data-palette")).toBe("cazview");
     expect(localStorage.getItem("sinwan-ui-palette")).toBe("cazview");
+    api().setPalette("voltzig");
+    expect(api().palette.value).toBe("voltzig");
+    expect(html().getAttribute("data-palette")).toBe("voltzig");
+    expect(localStorage.getItem("sinwan-ui-palette")).toBe("voltzig");
     unmount();
   });
 
@@ -320,14 +324,14 @@ describe("ThemeProvider", () => {
     stored.unmount();
 
     const forced = mountUi(() => (
-      <ThemeProvider defaultTheme="light" forcedPalette="credit-blue">
+      <ThemeProvider defaultTheme="light" forcedPalette="carzow">
         <Capture />
       </ThemeProvider>
     ));
-    expect(api().palette.value).toBe("credit-blue");
+    expect(api().palette.value).toBe("carzow");
     api().setPalette("jomlaty");
-    expect(api().palette.value).toBe("credit-blue");
-    expect(html().getAttribute("data-palette")).toBe("credit-blue");
+    expect(api().palette.value).toBe("carzow");
+    expect(html().getAttribute("data-palette")).toBe("carzow");
     forced.unmount();
   });
 
@@ -335,11 +339,11 @@ describe("ThemeProvider", () => {
     localStorage.setItem("custom-palette", "not-a-palette");
     const { api, Capture } = captureTheme();
     const { unmount } = mountUi(() => (
-      <ThemeProvider defaultTheme="light" paletteStorageKey="custom-palette" palettes={["credit-blue", "jomlaty"]}>
+      <ThemeProvider defaultTheme="light" paletteStorageKey="custom-palette" palettes={["carzow", "jomlaty"]}>
         <Capture />
       </ThemeProvider>
     ));
-    expect(api().palette.value).toBe("credit-blue");
+    expect(api().palette.value).toBe("carzow");
     api().setPalette("jomlaty");
     const unknown: string = "neon";
     const isPalette = (value: string): value is Palette => value.length > 0;
@@ -352,7 +356,7 @@ describe("ThemeProvider", () => {
         <Capture />
       </ThemeProvider>
     ));
-    expect(api().palettes).toEqual(["credit-blue", "jomlaty", "cazview"]);
+    expect(api().palettes).toEqual(["carzow", "jomlaty", "cazview", "voltzig"]);
     empty.unmount();
   });
 });

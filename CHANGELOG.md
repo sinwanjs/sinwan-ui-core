@@ -2,6 +2,16 @@
 
 All notable changes to this package are documented in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package uses [Semantic Versioning](https://semver.org/).
 
+## [1.4.0]
+
+### Added
+
+- `voltzig` palette (Voltzig AI): `Palette` now accepts `"voltzig"` and `ThemeProvider`'s default `palettes` list is `["carzow", "jomlaty", "cazview", "voltzig"]`. Pair it with the registry stylesheet, which defines the `html[data-palette="voltzig"]` tokens: `#08090D` black and `#FFFFFF` white surfaces with a monochrome primary, `#A3A3A3` silver for secondary text in dark mode, and `#6C5CE7` electric violet for focus rings, accent tints, the first chart color and the brand gradient. Apps that pass their own `palettes` list are unaffected.
+
+### Changed
+
+- **Breaking:** the default palette `"credit-blue"` is renamed `"carzow"`. `Palette` no longer accepts `"credit-blue"`, and `ThemeProvider`'s `defaultPalette` is now `"carzow"`, so `<html>` gets `data-palette="carzow"`. Replace `"credit-blue"` with `"carzow"` in `defaultPalette`, `forcedPalette`, `palettes` and `setPalette` calls. A saved `sinwan-ui-palette=credit-blue` value is ignored and falls back to `carzow`, which is the same set of colors. No alias is kept because sinwan-ui has no consumers yet.
+
 ## [1.3.1]
 
 ### Fixed
