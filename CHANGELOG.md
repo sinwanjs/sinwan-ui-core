@@ -2,6 +2,23 @@
 
 All notable changes to this package are documented in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package uses [Semantic Versioning](https://semver.org/).
 
+## [1.6.0]
+
+### Added
+
+- **Custom palettes, discovered from your stylesheet.** Write a palette in the same structure as the built-in ones (`html[data-palette="ocean"]` for light, `html[data-palette="ocean"].dark` for dark, and `html[data-palette="ocean"]:not(.light)` inside `@media (prefers-color-scheme: dark)`) in your `global.css`, then use it like a built-in: `<ThemeProvider defaultPalette="ocean">`, `forcedPalette="ocean"` or `setPalette("ocean")`. When `palettes` is omitted, `ThemeProvider` scans the page's stylesheets (inside `@media`, `@supports`, `@layer` and `@import` too, quoted or minified selectors) and lists every palette they define in `useTheme().palettes`, `carzow` first. It scans again on mount, when `setPalette` gets an unknown name, and on `refreshPalettes()`, so CSS that loads late still counts and a saved custom palette is restored. A palette under `:not(...)` is not counted. Cross-origin stylesheets cannot be read: pass `palettes` explicitly for those. When no stylesheet defines a palette (no DOM, tests), the list is the four built-ins, as before.
+- `discoverPalettes(document?)`, `BUILT_IN_PALETTES`, the `BuiltInPalette` type and `ThemeApi.refreshPalettes()`.
+
+### Changed
+
+- `Palette` is now `BuiltInPalette | string`: any palette name type-checks, and the built-in names still autocomplete. `setPalette` still ignores a name that is not in the allowed list.
+- **Breaking:** `ThemeApi.palettes` is a `Signal<Palette[]>` (like `palette` and `theme`), so a palette picker updates when new palettes are found. Read `palettes.value` instead of `palettes`. No alias is kept because sinwan-ui has no consumers outside the registry yet.
+- An explicit `palettes` list is used as given and skips discovery, as before. `palettes={[]}` now means "discover", which falls back to the built-ins as before when nothing is found.
+
+### Fixed
+
+- The source of `src/internal/controlled.ts` (SW202 guard, 1.5.1) typechecks without Node or Bun types: it declares the `process.env.NODE_ENV` it reads. Builds are unchanged.
+
 ## [1.5.1]
 
 ### Fixed

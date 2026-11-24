@@ -2,7 +2,15 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { inject } from "sinwan/component";
 import { signal } from "sinwan/reactivity";
 import { DirectionKey, DirectionProvider, useDirection, type Direction, type DirectionApi } from "../src/direction";
-import { ThemeProvider, ThemeToggle, useTheme, type Palette, type ThemeApi } from "../src/theme";
+import {
+  BUILT_IN_PALETTES,
+  discoverPalettes,
+  ThemeProvider,
+  ThemeToggle,
+  useTheme,
+  type Palette,
+  type ThemeApi,
+} from "../src/theme";
 import {
   matchMediaListenerCount,
   mountUi,
@@ -295,7 +303,7 @@ describe("ThemeProvider", () => {
       </ThemeProvider>
     ));
     expect(api().palette.value).toBe("carzow");
-    expect(api().palettes).toEqual(["carzow", "jomlaty", "cazview", "voltzig"]);
+    expect(api().palettes.value).toEqual(["carzow", "jomlaty", "cazview", "voltzig"]);
     expect(html().getAttribute("data-palette")).toBe("carzow");
     api().setPalette("jomlaty");
     expect(api().palette.value).toBe("jomlaty");
@@ -345,9 +353,7 @@ describe("ThemeProvider", () => {
     ));
     expect(api().palette.value).toBe("carzow");
     api().setPalette("jomlaty");
-    const unknown: string = "neon";
-    const isPalette = (value: string): value is Palette => value.length > 0;
-    if (isPalette(unknown)) api().setPalette(unknown);
+    api().setPalette("neon");
     expect(api().palette.value).toBe("jomlaty");
     unmount();
 
@@ -356,8 +362,178 @@ describe("ThemeProvider", () => {
         <Capture />
       </ThemeProvider>
     ));
-    expect(api().palettes).toEqual(["carzow", "jomlaty", "cazview", "voltzig"]);
+    expect(api().palettes.value).toEqual(["carzow", "jomlaty", "cazview", "voltzig"]);
     empty.unmount();
+  });
+});
+
+/** Adds a `<style>` to the document, as an app's global.css would. */
+function addStylesheet(css: string): HTMLStyleElement {
+  const style = document.createElement("style");
+  style.textContent = css;
+  document.head.appendChild(style);
+  return style;
+}
+
+/** A custom palette written like the built-in ones in the registry stylesheet. */
+const OCEAN_CSS = `
+  :root { --primary: blue; }
+  .dark { --primary: navy; }
+  html[data-palette="jomlaty"] { --primary: orange; }
+  html[data-palette="ocean"] { --primary: teal; }
+  html[data-palette="ocean"].dark { --primary: darkcyan; }
+  @media (prefers-color-scheme: dark) {
+    html:not(.light):not([data-palette]), html[data-palette="carzow"]:not(.light) { --primary: navy; }
+    html[data-palette="ocean"]:not(.light) { --primary: darkcyan; }
+  }
+`;
+
+describe("custom palettes", () => {
+  test("discoverPalettes finds every data-palette selector, carzow first", () => {
+    expect(discoverPalettes()).toEqual([]);
+    addStylesheet(OCEAN_CSS);
+    addStylesheet(`
+      html[data-palette=sunset].dark, html[data-palette='mint'] { --primary: red; }
+      @supports (color: oklch(0 0 0)) { html[data-palette="aurora"] { --primary: green; } }
+      html:not([data-palette="excluded"]) { --primary: gray; }
+    `);
+    expect(discoverPalettes()).toEqual(["carzow", "jomlaty", "ocean", "sunset", "mint", "aurora"]);
+    expect(discoverPalettes(document)).toEqual(discoverPalettes());
+  });
+
+  test("a stylesheet without palettes falls back to the built-ins", () => {
+    addStylesheet(":root { --primary: blue; }");
+    const { api, Capture } = captureTheme();
+    const { unmount } = mountUi(() => (
+      <ThemeProvider defaultTheme="light">
+        <Capture />
+      </ThemeProvider>
+    ));
+    expect(api().palettes.value).toEqual([...BUILT_IN_PALETTES]);
+    unmount();
+  });
+
+  test("ThemeProvider offers the discovered palettes and applies a custom one", () => {
+    addStylesheet(OCEAN_CSS);
+    const { api, Capture } = captureTheme();
+    const { unmount } = mountUi(() => (
+      <ThemeProvider defaultTheme="light">
+        <Capture />
+      </ThemeProvider>
+    ));
+    expect(api().palettes.value).toEqual(["carzow", "jomlaty", "ocean"]);
+    api().setPalette("ocean");
+    expect(api().palette.value).toBe("ocean");
+    expect(html().getAttribute("data-palette")).toBe("ocean");
+    expect(localStorage.getItem("sinwan-ui-palette")).toBe("ocean");
+    // Not defined by the stylesheet: rejected.
+    api().setPalette("voltzig");
+    expect(api().palette.value).toBe("ocean");
+    unmount();
+  });
+
+  test("defaultPalette and forcedPalette accept a custom palette", () => {
+    addStylesheet(OCEAN_CSS);
+    const { api, Capture } = captureTheme();
+    const byDefault = mountUi(() => (
+      <ThemeProvider defaultTheme="dark" defaultPalette="ocean">
+        <Capture />
+      </ThemeProvider>
+    ));
+    expect(api().palette.value).toBe("ocean");
+    expect(html().getAttribute("data-palette")).toBe("ocean");
+    expect(html().classList.contains("dark")).toBe(true);
+    byDefault.unmount();
+
+    const forced = mountUi(() => (
+      <ThemeProvider defaultTheme="light" forcedPalette="ocean">
+        <Capture />
+      </ThemeProvider>
+    ));
+    expect(api().palette.value).toBe("ocean");
+    api().setPalette("jomlaty");
+    expect(api().palette.value).toBe("ocean");
+    forced.unmount();
+  });
+
+  test("restores a saved custom palette", () => {
+    addStylesheet(OCEAN_CSS);
+    localStorage.setItem("sinwan-ui-palette", "ocean");
+    const { api, Capture } = captureTheme();
+    const { unmount } = mountUi(() => (
+      <ThemeProvider defaultTheme="light">
+        <Capture />
+      </ThemeProvider>
+    ));
+    expect(api().palette.value).toBe("ocean");
+    expect(html().getAttribute("data-palette")).toBe("ocean");
+    unmount();
+  });
+
+  test("a palette from CSS loaded after mount is found on setPalette and refreshPalettes", () => {
+    localStorage.setItem("sinwan-ui-palette", "ocean");
+    const { api, Capture } = captureTheme();
+    const { unmount } = mountUi(() => (
+      <ThemeProvider defaultTheme="light">
+        <Capture />
+      </ThemeProvider>
+    ));
+    // The saved palette is unknown until its stylesheet loads.
+    expect(api().palette.value).toBe("carzow");
+    expect(api().palettes.value).toEqual([...BUILT_IN_PALETTES]);
+
+    addStylesheet(OCEAN_CSS);
+    api().setPalette("ocean");
+    expect(api().palette.value).toBe("ocean");
+    expect(api().palettes.value).toEqual(["carzow", "jomlaty", "ocean"]);
+
+    addStylesheet('html[data-palette="sunset"] { --primary: red; }');
+    expect(api().refreshPalettes()).toEqual(["carzow", "jomlaty", "ocean", "sunset"]);
+    expect(api().palettes.value).toEqual(["carzow", "jomlaty", "ocean", "sunset"]);
+    unmount();
+  });
+
+  test("palettes is reactive in JSX", async () => {
+    const { api, Capture } = captureTheme();
+    const List = () => {
+      const theme = useTheme();
+      return <span data-slot="palette-list">{theme.palettes.value.join(",")}</span>;
+    };
+    const { unmount } = mountUi(() => (
+      <ThemeProvider defaultTheme="light">
+        <Capture />
+        <List />
+      </ThemeProvider>
+    ));
+    expect(query('[data-slot="palette-list"]').textContent).toBe("carzow,jomlaty,cazview,voltzig");
+    addStylesheet('html[data-palette="ocean"] { --primary: teal; }');
+    api().refreshPalettes();
+    await wait();
+    expect(query('[data-slot="palette-list"]').textContent).toBe("carzow,ocean");
+    unmount();
+  });
+
+  test("an explicit palettes list skips discovery", () => {
+    addStylesheet(OCEAN_CSS);
+    const { api, Capture } = captureTheme();
+    const { unmount } = mountUi(() => (
+      <ThemeProvider defaultTheme="light" forcedPalette="cazview" palettes={["cazview"]}>
+        <Capture />
+      </ThemeProvider>
+    ));
+    expect(api().palettes.value).toEqual(["cazview"]);
+    expect(api().refreshPalettes()).toEqual(["cazview"]);
+    unmount();
+  });
+
+  test("cross-origin stylesheets are skipped", () => {
+    addStylesheet(OCEAN_CSS);
+    const blocked = { get cssRules(): CSSRuleList { throw new Error("SecurityError"); } };
+    const sheets = [blocked, ...Array.from(document.styleSheets)];
+    const doc = { styleSheets: sheets };
+    const isDocument = (value: object): value is Document => "styleSheets" in value;
+    if (!isDocument(doc)) throw new Error("unreachable");
+    expect(discoverPalettes(doc)).toEqual(["carzow", "jomlaty", "ocean"]);
   });
 });
 

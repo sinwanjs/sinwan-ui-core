@@ -11,9 +11,85 @@ import { batch, computed, signal, type Signal } from "sinwan/reactivity";
 
 export type Theme = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
-export type Palette = "carzow" | "jomlaty" | "cazview" | "voltzig";
+/** The palettes the sinwan-ui stylesheet ships. `carzow` is the `:root` default. */
+export type BuiltInPalette = "carzow" | "jomlaty" | "cazview" | "voltzig";
 
-const DEFAULT_PALETTES: Palette[] = ["carzow", "jomlaty", "cazview", "voltzig"];
+/**
+ * A built-in palette, or a custom one: any name the app's stylesheet defines
+ * as `html[data-palette="name"]`. Built-in names keep their autocompletion.
+ */
+export type Palette = BuiltInPalette | (string & Record<never, never>);
+
+export const BUILT_IN_PALETTES: readonly BuiltInPalette[] = [
+  "carzow",
+  "jomlaty",
+  "cazview",
+  "voltzig",
+];
+
+/** `[data-palette="name"]`, `[data-palette='name']` or `[data-palette=name]`. */
+const PALETTE_ATTRIBUTE =
+  /\[\s*data-palette\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s\]]+))\s*(?:[is]\s*)?\]/g;
+/** `:not(...)` excludes a palette instead of defining one. */
+const NOT_PSEUDO = /:not\([^()]*\)/g;
+
+type RuleList = ArrayLike<CSSRule>;
+type SheetLike = { readonly cssRules: RuleList };
+
+function isRuleList(value: unknown): value is RuleList {
+  return typeof value === "object" && value !== null && "length" in value && typeof value.length === "number";
+}
+
+function isSheet(value: unknown): value is SheetLike {
+  return typeof value === "object" && value !== null && "cssRules" in value;
+}
+
+function collectPalettes(rules: RuleList, found: Set<string>): void {
+  for (let i = 0; i < rules.length; i++) {
+    const rule = rules[i];
+    if (!rule) continue;
+    if ("selectorText" in rule && typeof rule.selectorText === "string") {
+      const selector = rule.selectorText.replace(NOT_PSEUDO, "");
+      for (const match of selector.matchAll(PALETTE_ATTRIBUTE)) {
+        const name = match[1] ?? match[2] ?? match[3];
+        if (name) found.add(name);
+      }
+    }
+    // @media, @supports, @layer, @container and nested style rules.
+    const children: unknown = Reflect.get(rule, "cssRules");
+    if (isRuleList(children)) collectPalettes(children, found);
+    // @import url(...)
+    const imported: unknown = Reflect.get(rule, "styleSheet");
+    if (isSheet(imported)) collectSheet(imported, found);
+  }
+}
+
+function collectSheet(sheet: SheetLike, found: Set<string>): void {
+  let rules: RuleList;
+  try {
+    rules = sheet.cssRules;
+  } catch {
+    // A cross-origin stylesheet hides its rules: pass `palettes` explicitly.
+    return;
+  }
+  collectPalettes(rules, found);
+}
+
+/**
+ * The palettes the page's stylesheets define, in stylesheet order: every
+ * `html[data-palette="name"]` selector names one, inside `@media`, `@supports`,
+ * `@layer` and `@import` too. `carzow` comes first when any is found, since
+ * the stylesheet's `:root` tokens are that palette. Empty when no stylesheet
+ * defines a palette (no DOM, CSS not loaded yet, or cross-origin CSS).
+ */
+export function discoverPalettes(doc?: Document): Palette[] {
+  const target = doc ?? (typeof document === "undefined" ? undefined : document);
+  if (!target) return [];
+  const found = new Set<string>();
+  for (const sheet of Array.from(target.styleSheets)) collectSheet(sheet, found);
+  if (found.size === 0) return [];
+  return Array.from(new Set<Palette>(["carzow", ...found]));
+}
 
 export type ThemeApi = {
   theme: Signal<Theme>;
@@ -22,7 +98,14 @@ export type ThemeApi = {
   themes: Theme[];
   palette: Signal<Palette>;
   setPalette: (palette: Palette) => void;
-  palettes: Palette[];
+  /**
+   * The palettes `setPalette` accepts: the `palettes` prop, or the ones the
+   * stylesheets define (see `discoverPalettes`). A signal, so a palette
+   * picker follows `refreshPalettes`.
+   */
+  palettes: Signal<Palette[]>;
+  /** Scans the stylesheets again, for CSS loaded after the provider mounted. */
+  refreshPalettes: () => Palette[];
 };
 
 export const ThemeKey: InjectionKey<ThemeApi> = Symbol("sinwan-ui.theme");
@@ -35,6 +118,11 @@ export type ThemeProviderProps = {
   defaultPalette?: Palette;
   forcedPalette?: Palette;
   paletteStorageKey?: string;
+  /**
+   * The palettes to allow. Omit it (or pass `[]`) to discover them from the
+   * stylesheets: a custom `html[data-palette="name"]` block in the app's CSS
+   * is then a palette like the built-in ones.
+   */
   palettes?: Palette[];
   disableTransitionOnChange?: boolean;
   enableSystem?: boolean;
@@ -45,8 +133,8 @@ function isTheme(value: string | null): value is Theme {
   return value === "light" || value === "dark" || value === "system";
 }
 
-function isPalette(value: string | null, allowed: Palette[]): value is Palette {
-  return value !== null && (allowed as string[]).includes(value);
+function isPalette(value: string | null, allowed: readonly Palette[]): value is Palette {
+  return value !== null && allowed.includes(value);
 }
 
 function readStoredTheme(storageKey: string, fallback: Theme): Theme {
@@ -60,19 +148,13 @@ function readStoredTheme(storageKey: string, fallback: Theme): Theme {
   return fallback;
 }
 
-function readStoredPalette(
-  storageKey: string,
-  fallback: Palette,
-  allowed: Palette[],
-): Palette {
-  if (typeof localStorage === "undefined") return fallback;
+function readStoredValue(storageKey: string): string | null {
+  if (typeof localStorage === "undefined") return null;
   try {
-    const value = localStorage.getItem(storageKey);
-    if (isPalette(value, allowed)) return value;
+    return localStorage.getItem(storageKey);
   } catch {
-    /* ignore */
+    return null;
   }
-  return fallback;
 }
 
 function getSystemTheme(): ResolvedTheme {
@@ -131,18 +213,49 @@ export const ThemeProvider = cc<ThemeProviderProps>(
     defaultPalette = "carzow",
     forcedPalette,
     paletteStorageKey = "sinwan-ui-palette",
-    palettes = DEFAULT_PALETTES,
+    palettes = [],
     disableTransitionOnChange = true,
     enableSystem = true,
     attribute = "class",
   }) => {
-    const allowedPalettes = palettes.length > 0 ? palettes : DEFAULT_PALETTES;
+    const explicitPalettes = palettes.length > 0 ? palettes : null;
+    /**
+     * The allowed palettes: the `palettes` prop as given, or the discovered
+     * ones (the built-ins when none is found) plus the default and forced ones.
+     */
+    const listPalettes = (): Palette[] => {
+      if (explicitPalettes) return explicitPalettes;
+      const discovered = discoverPalettes();
+      return Array.from(
+        new Set<Palette>([
+          ...(discovered.length > 0 ? discovered : BUILT_IN_PALETTES),
+          defaultPalette,
+          ...(forcedPalette === undefined ? [] : [forcedPalette]),
+        ]),
+      );
+    };
+    const allowedPalettes = signal<Palette[]>(listPalettes());
     const initialTheme = forcedTheme ?? readStoredTheme(storageKey, defaultTheme);
+    const storedPalette = readStoredValue(paletteStorageKey);
     const initialPalette =
       forcedPalette ??
-      readStoredPalette(paletteStorageKey, defaultPalette, allowedPalettes);
+      (isPalette(storedPalette, allowedPalettes.peek())
+        ? storedPalette
+        : defaultPalette);
     const theme = signal<Theme>(initialTheme);
     const palette = signal<Palette>(initialPalette);
+
+    const refreshPalettes = (): Palette[] => {
+      const next = listPalettes();
+      const current = allowedPalettes.peek();
+      if (
+        next.length !== current.length ||
+        next.some((name, index) => name !== current[index])
+      ) {
+        allowedPalettes.value = next;
+      }
+      return allowedPalettes.peek();
+    };
     const resolved = signal<ResolvedTheme>(
       initialTheme === "system"
         ? getSystemTheme()
@@ -199,7 +312,10 @@ export const ThemeProvider = cc<ThemeProviderProps>(
 
     const setPalette = (value: Palette) => {
       if (forcedPalette) return;
-      if (!allowedPalettes.includes(value)) return;
+      // A palette from CSS loaded after the last scan: look again once.
+      if (!allowedPalettes.peek().includes(value) && !refreshPalettes().includes(value)) {
+        return;
+      }
       try {
         localStorage.setItem(paletteStorageKey, value);
       } catch {
@@ -211,6 +327,17 @@ export const ThemeProvider = cc<ThemeProviderProps>(
     onMounted(() => {
       commit(theme.value);
       writeDomPalette(palette.value);
+      // Stylesheets that finished loading after setup may define the saved
+      // palette: restore it now instead of keeping the default.
+      if (
+        !forcedPalette &&
+        !explicitPalettes &&
+        storedPalette !== null &&
+        storedPalette !== palette.peek() &&
+        isPalette(storedPalette, refreshPalettes())
+      ) {
+        commitPalette(storedPalette);
+      }
       if (!enableSystem) return;
       const mq = window.matchMedia("(prefers-color-scheme: dark)");
       const onChange = () => {
@@ -232,6 +359,7 @@ export const ThemeProvider = cc<ThemeProviderProps>(
       palette,
       setPalette,
       palettes: allowedPalettes,
+      refreshPalettes,
     });
 
     // Touch computed so consumers can depend on resolved updates in templates.

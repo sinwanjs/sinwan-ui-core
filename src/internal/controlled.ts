@@ -1,5 +1,12 @@
 import { devWarn } from "sinwan/dev";
 
+/**
+ * The only part of `process` this module reads; the app's bundler replaces
+ * it. Declared here so the source typechecks without Node or Bun types (the
+ * registry's consumer check); it emits nothing and shadows the global.
+ */
+declare const process: { readonly env: { readonly NODE_ENV?: string } };
+
 /** A zero-argument function is a getter (live props, `useControllableState` options). */
 function currentValue(props: object, key: string): unknown {
   const value: unknown = Reflect.get(props, key);
