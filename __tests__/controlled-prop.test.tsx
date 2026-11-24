@@ -47,6 +47,17 @@ describe("isControlledProp", () => {
       ],
     ]);
   });
+  test("stays silent in a production build", () => {
+    const previous = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    try {
+      expect(isControlledProp({ value: undefined }, "value", "Box")).toBe(true);
+    } finally {
+      if (previous === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = previous;
+    }
+    expect(warnings).toEqual([]);
+  });
 });
 
 describe("controls report an undefined controlled prop", () => {

@@ -2,6 +2,12 @@
 
 All notable changes to this package are documented in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this package uses [Semantic Versioning](https://semver.org/).
 
+## [1.5.1]
+
+### Fixed
+
+- **The SW202 warning no longer ships in production bundles.** sinwan-ui-core is one bundle, and Bun inlined this package's own `process.env.NODE_ENV` while building `dist/`, so the SW202 check and its message stayed in every app's production bundle (it never printed, because `devWarn` is a no-op in sinwan's production build). The check is now guarded by `process.env.NODE_ENV !== "production"`, and `build.ts` leaves that expression in `dist/` for the app's bundler to replace (Bun by default, Vite for dependencies). A production build now drops the check, its message and the value read it needed; a development build keeps the warning.
+
 ## [1.5.0]
 
 ### Added

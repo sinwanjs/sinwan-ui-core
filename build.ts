@@ -62,6 +62,10 @@ async function buildLibrary(entrypoints: readonly string[]): Promise<void> {
     outdir: DIST,
     root: SRC,
     target: "browser",
+    // Keep `process.env.NODE_ENV` for the app's bundler to replace: Bun would
+    // otherwise inline this build's value and keep development-only warnings
+    // (SW202) in every app's production bundle.
+    define: { "process.env.NODE_ENV": "process.env.NODE_ENV" },
     splitting: true,
     packages: "external",
     jsx: { runtime: "automatic", importSource: "sinwan", development: false },
